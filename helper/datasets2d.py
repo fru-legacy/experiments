@@ -5,7 +5,7 @@ from tensorflow.examples.tutorials.mnist import input_data
 
 class _MnistLoader():
     def __init__(self, file, width, height, channels, target):
-        self._data = input_data.read_data_sets(file, one_hot=True, seed=123)
+        self._data = input_data.read_data_sets(file, one_hot=True)
         self._set = _Dataset2D(width, height, channels, target)
 
     def next_batch(self, size):

@@ -1,7 +1,9 @@
 import tensorflow as tf
-import numpy as np
 from helper.decorators import variable_scope
 from helper.datasets2d import load_fashion_mnist
+from helper.helper import use_constant_seed_disable_gpu
+
+use_constant_seed_disable_gpu(True)
 
 
 class Model:
@@ -13,7 +15,7 @@ class Model:
         self.optimize = self._optimize()
         self.error = self._error()
 
-    @variable_scope(initializer=tf.contrib.layers.xavier_initializer(seed=0))
+    @variable_scope(initializer=tf.contrib.layers.xavier_initializer())
     def _prediction(self):
         x = self.image
         x = tf.contrib.layers.fully_connected(x, 200)
@@ -25,8 +27,7 @@ class Model:
     def _optimize(self):
         logprob = tf.log(self.prediction + 1e-12)
         cross_entropy = -tf.reduce_sum(self.label * logprob)
-        optimizer = tf.train.RMSPropOptimizer(0.03)
-        return optimizer.minimize(cross_entropy)
+        return tf.train.AdamOptimizer(1e-4).minimize(cross_entropy)
 
     @variable_scope
     def _error(self):
@@ -35,9 +36,6 @@ class Model:
 
 
 def main():
-    tf.set_random_seed(10)
-    np.random.seed(10)
-
     (data, feed) = load_fashion_mnist()
     model = Model(data)
     sess = tf.Session()
