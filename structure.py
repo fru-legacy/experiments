@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 from helper.decorators import variable_scope
 from helper.datasets2d import load_fashion_mnist
 
@@ -12,12 +13,12 @@ class Model:
         self.optimize = self._optimize()
         self.error = self._error()
 
-    @variable_scope(initializer=tf.contrib.slim.xavier_initializer())
+    @variable_scope(initializer=tf.contrib.layers.xavier_initializer(seed=0))
     def _prediction(self):
         x = self.image
-        x = tf.contrib.slim.fully_connected(x, 200)
-        x = tf.contrib.slim.fully_connected(x, 200)
-        x = tf.contrib.slim.fully_connected(x, 10, tf.nn.softmax)
+        x = tf.contrib.layers.fully_connected(x, 200)
+        x = tf.contrib.layers.fully_connected(x, 200)
+        x = tf.contrib.layers.fully_connected(x, 10, tf.nn.softmax)
         return x
 
     @variable_scope
@@ -34,11 +35,13 @@ class Model:
 
 
 def main():
-    tf.set_random_seed(123)
+    tf.set_random_seed(10)
+    np.random.seed(10)
+
     (data, feed) = load_fashion_mnist()
     model = Model(data)
     sess = tf.Session()
-    sess.run(tf.initialize_all_variables())
+    sess.run(tf.global_variables_initializer())
 
     for _ in range(10):
         error = sess.run(model.error, {**feed.testing()})
