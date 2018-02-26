@@ -1,6 +1,3 @@
-#import os.path, sys
-#sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 import tensorflow as tf
 from helper.datasets2d import load_fashion_mnist
 from helper.helper import get_initialized_session
@@ -26,6 +23,3 @@ for t in range(10):
 
     error = session.run(model.error, {**data.testing()})
     print('Test error {:6.2f}%'.format(100 * error))
-
-
-
