@@ -15,11 +15,15 @@ session = get_initialized_session(disable_gpu=True)
 summary_writer = tf.summary.FileWriter('log', session.graph)
 summary_writer.add_session_log(SessionLog(status=SessionLog.START), 0)
 
-for t in range(10):
+grads_and_vars = model.optimizer.compute_gradients(model.cross_entropy)
+optimize = model.optimizer.apply_gradients(grads_and_vars)
+
+for t in range(55):
     epoch_size = 60
     for e in range(epoch_size):
-        _, log = session.run([model.optimize, summary], {**data.next_batch(100)})
-        summary_writer.add_summary(log, t * epoch_size + e)
+        _, log = session.run([optimize, summary], {**data.next_batch(100)})
+        #summary_writer.add_summary(log, t * epoch_size + e)
 
-    error = session.run(model.error, {**data.testing()})
+    error, log = session.run([model.error, summary], {**data.testing()})
+    summary_writer.add_summary(log, t)
     print('Test error {:6.2f}%'.format(100 * error))
