@@ -20,7 +20,7 @@ class ConvSnn:
         x = tf.contrib.layers.conv2d(x, 32, (3, 3), activation_fn=tf.nn.selu, weights_initializer=lecun_norm)
         x = tf.contrib.layers.conv2d(x, 64, (3, 3), activation_fn=tf.nn.selu, weights_initializer=lecun_norm)
         x = tf.contrib.layers.max_pool2d(x, (2, 2), stride=2)
-        x = alpha_dropout_enabled(x, 0.25, self.dropout_enabled)
+        x = alpha_dropout_enabled(x, 0.75, self.dropout_enabled)
         x = tf.contrib.layers.flatten(x)
         x = tf.contrib.layers.fully_connected(x, 512, tf.nn.selu, weights_initializer=lecun_norm)
         x = alpha_dropout_enabled(x, 0.5, self.dropout_enabled)
