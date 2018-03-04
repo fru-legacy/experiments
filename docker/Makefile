@@ -8,7 +8,7 @@ RUN_TENSORBOARD=tensorboard --logdir $(LOG_DIR) --host 0.0.0.0
 RUN_MAIN=PYTHONPATH=/src python3 /src/$(PROJECT)/main.py
 RUN_COMPOSE=docker-compose run --service-ports $(DOCKER_IMAGE)
 
-OPEN_TENSORBOARD=sleep 4 && google-chrome http://0.0.0.0:6006
+OPEN_TENSORBOARD=sleep 4 && google-chrome http://0.0.0.0:7007
 
 rebuild:
 	docker-compose build
@@ -20,11 +20,8 @@ docker-clean:
 run:
 	$(RUN_COMPOSE) bash -c "$(RUN_MAIN)"
 
-run-board:
-	$(OPEN_TENSORBOARD) & $(RUN_COMPOSE) bash -c "$(RUN_TENSORBOARD) & $(RUN_MAIN) && sleep 20"
-
 view-board:
-	$(OPEN_TENSORBOARD) & $(RUN_COMPOSE) bash -c "$(RUN_TENSORBOARD)"
+	$(OPEN_TENSORBOARD) & docker run -p 0.0.0.0:7007:6006 -v ~/experiments:/src -it tensorflow/tensorflow bash -c "$(RUN_TENSORBOARD)"
 
 bash:
 	$(RUN_COMPOSE) bash

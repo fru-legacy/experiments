@@ -7,23 +7,23 @@ from tensorflow.python.keras.models import Sequential
 from tensorflow.python.keras.layers import Dense, Dropout, AlphaDropout, Flatten
 from tensorflow.python.keras.layers import Conv2D, MaxPooling2D
 from tensorflow.python.keras import backend as K
-import L4
-
-...
-
 import numpy as np
 
-tensorboard = keras.callbacks.TensorBoard(log_dir='./log-1', histogram_freq=0, write_graph=True)
 
 batch_size = 128
 num_classes = 10
-epochs = 30
+epochs = 1
+
+tensorboard = keras.callbacks.TensorBoard(log_dir='./logs', histogram_freq=0, batch_size=batch_size,
+                                          write_graph=True, write_grads=False, write_images=False)
 
 # input image dimensions
 img_rows, img_cols = 28, 28
 
 # the data, shuffled and split between train and test sets
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
+f = np.load('/data/fashion-mnist.npz')
+x_train, y_train, x_test, y_test = f['x_train'], f['y_train'], f['x_test'], f['y_test']
+f.close()
 
 if K.image_data_format() == 'channels_first':
     x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
@@ -34,13 +34,6 @@ else:
     x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
     input_shape = (img_rows, img_cols, 1)
 
-x_train = x_train.astype('float32')
-x_test = x_test.astype('float32')
-x_train /= 255
-#x_train = (x_train - np.mean(x_train))/np.std(x_train)
-
-x_test /= 255
-#x_test = (x_test - np.mean(x_train))/np.std(x_train)
 
 print('x_train shape:', x_train.shape)
 print(x_train.shape[0], 'train samples')
@@ -63,7 +56,7 @@ model.add(AlphaDropout(0.5))
 model.add(Dense(num_classes, activation='softmax',kernel_initializer='lecun_normal',bias_initializer='zeros'))
 
 model.compile(loss=keras.losses.categorical_crossentropy,
-              optimizer=L4.L4Adam(fraction=0.20),
+              optimizer=keras.optimizers.Adadelta(),
               metrics=['accuracy'])
 
 model.fit(x_train, y_train,
@@ -72,12 +65,7 @@ model.fit(x_train, y_train,
           verbose=1,
           validation_data=(x_test, y_test),
           callbacks=[tensorboard])
-score = model.evaluate(x_test, y_test, verbose=0)
+
+score = model.evaluate(x_test, y_test, verbose=1)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
-
-f = open('MNIST_SELU_results.txt', 'a')
-f.write('Test loss:' + str(score[0]) + ' Test accuracy:' + str(score[1]) +  '\n')  # python will convert \n to os.linesep
-f.close() 
-
-

@@ -12,7 +12,9 @@ from tensorflow.examples.tutorials.mnist import input_data
 class _MnistLoader():
     def __init__(self, file):
         self._data = input_data.read_data_sets(file, one_hot=True)
-
+        # np.savez_compressed('/data/fashion-mnist.npz',
+        #                     x_train=self._data.train.images, y_train=self._data.train.labels,
+        #                     x_test=self._data.test.images,   y_test=self._data.test.labels)
     def next_batch(self, size):
         return self._data.train.next_batch(size)
 
@@ -45,9 +47,18 @@ class _Dataset2D():
         images, labels = self._loader.next_batch(size)
         return {self.image_flat: images, self.label: labels}
 
-    def testing(self):
-        images, labels = self._loader.testing()
+    def testing(self, transform=None):
+        full = self._loader.testing()
+        if transform:
+            full = transform(full)
+        images, labels = full
         return {self.image_flat: images, self.label: labels}
+
+    def testing_split(self, count):
+        images, labels = self._loader.testing()
+        images_split = np.split(images, count)
+        labels_split = np.split(labels, count)
+        return [{self.image_flat: images_split[i], self.label: labels_split[i]} for i in range(count)]
 
 
 def load_mnist(constant_tf_seed):
