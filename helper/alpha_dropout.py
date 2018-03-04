@@ -18,6 +18,7 @@ from __future__ import print_function
 
 import numbers
 
+import tensorflow as tf
 from tensorflow.python.framework import ops
 from tensorflow.python.framework import tensor_shape
 from tensorflow.python.framework import tensor_util
@@ -25,6 +26,11 @@ from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import random_ops
 from tensorflow.python.ops import gen_math_ops
 from tensorflow.python.ops import math_ops
+
+
+def alpha_dropout_enabled(x, keep_prob, enabled, **kwargs):
+    keep_prob = tf.where(enabled, keep_prob, 1.0)
+    return alpha_dropout(x, keep_prob, **kwargs)
 
 
 def alpha_dropout(x, keep_prob, noise_shape=None, seed=None, name=None): # pylint: disable=invalid-name

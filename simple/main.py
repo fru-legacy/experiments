@@ -15,19 +15,20 @@ tf.summary.scalar('error', model.error)
 summary = tf.summary.merge_all()
 
 session = get_initialized_session(disable_gpu=False)
-summary_writer = tf.summary.FileWriter('log', session.graph)
+summary_writer = tf.summary.FileWriter('../log', session.graph)
 summary_writer.add_session_log(SessionLog(status=SessionLog.START), 0)
 
-for t in range(1):
+for t in range(5):
     for e in range(60000 // 128):
-        error, _ = session.run([model.error, model.optimize], {**data.next_batch(128)})
-        print(error)
+        _, en = session.run([model.optimize, model.cross_entropy], {**data.next_batch(128)})
+        print(en)
 
     tests = data.testing_split(20)
     errors = []
     for i in range(20):
-        error, log = session.run([model.error, summary], {**tests[i]})
+        error, log = session.run([model.error, summary], {**tests[i], model.dropout_enabled: False})
         if i == 0:
             summary_writer.add_summary(log, t)
         errors.append(error)
     print(errors)
+    print(np.mean(errors))
