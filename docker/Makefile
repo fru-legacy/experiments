@@ -1,6 +1,6 @@
 # Run in pycharm with bash plugin. Leave script empty and add option -c "make ..."
 
-PROJECT=simple
+PROJECT=basis
 LOG_DIR=/src/log
 DOCKER_IMAGE=tensorflow-nonroot
 
