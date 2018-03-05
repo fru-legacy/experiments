@@ -3,15 +3,13 @@
 
 services:
   tensorflow-nonroot:
+    network_mode: host
     build:
       context: .
     devices:
     - /dev/nvidia0
     - /dev/nvidiactl
     - /dev/nvidia-uvm
-    ports:
-    - 6006:6006
-    - 8888:8888
     volumes:
     - ~/experiments:/src
     - ~/datasets:/data
@@ -23,3 +21,5 @@ version: '2'
 volumes:
   nvidia_driver_384.111:
     external: true
+#networks:
+#  bridge:

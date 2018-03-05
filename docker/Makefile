@@ -1,17 +1,18 @@
 # Run in pycharm with bash plugin. Leave script empty and add option -c "make ..."
 
-PROJECT=basis
+PROJECT=simple
 
 LOG_DIR=~/experiments/log
 LOG_SUB_DIRS=$(shell for D in $(LOG_DIR)/log-*/; do printf "$$(basename $$D):/src/log/$$(basename $$D),"; done)
 
 DOCKER_IMAGE=tensorflow-nonroot
+COMPOSE=docker-compose run --service-ports $(DOCKER_IMAGE)
 
-RUN_TENSORBOARD=tensorboard --logdir=$(LOG_SUB_DIRS) --host 0.0.0.0
-RUN_MAIN=PYTHONPATH=/src python3 /src/$(PROJECT)/main.py
-RUN_COMPOSE=docker-compose run --service-ports $(DOCKER_IMAGE)
+RUN_TENSORBOARD=tensorboard --logdir=$(LOG_SUB_DIRS) --host=0.0.0.0 --debugger_port=6064
+RUN_MAIN=cd /src/$(PROJECT); PYTHONPATH=/src python3 /src/$(PROJECT)/main.py
+RUN_GPU_WATCH=watch --color -n1.0 gpustat --color
 
-OPEN_TENSORBOARD=sleep 4 && google-chrome http://0.0.0.0:7007
+OPEN_TENSORBOARD=sleep 4 && google-chrome http://0.0.0.0:6006
 
 rebuild:
 	docker-compose build
@@ -21,10 +22,20 @@ docker-clean:
 	docker rm  \$(docker ps --filter=status=exited --filter=status=created -q)
 
 run:
-	$(RUN_COMPOSE) bash -c "$(RUN_MAIN)"
+	$(COMPOSE) bash -c "$(RUN_MAIN)"
+
+debug:
+	$(COMPOSE) bash -c "$(RUN_MAIN) --debug"
 
 tensorboard:
-	$(OPEN_TENSORBOARD) & docker run -p 0.0.0.0:7007:6006 -v ~/experiments:/src -it tensorflow/tensorflow bash -c "$(RUN_TENSORBOARD)"
+	$(OPEN_TENSORBOARD) & docker run --net host -v ~/experiments:/src -it tensorflow/tensorflow bash -c "$(RUN_TENSORBOARD)"
+
+gpu-watch:
+	$(COMPOSE) bash -c "$(RUN_GPU_WATCH)"
 
 bash:
-	$(RUN_COMPOSE) bash
+	$(COMPOSE) bash
+
+stop-all:
+	docker stop $$(docker ps -aq)
+
