@@ -15,6 +15,8 @@ class VLadder(Network):
         self.data_dims = self.dataset.data_dims
         self.latent_noise = False
 
+
+
         self.fs = [self.data_dims[0], self.data_dims[0] // 2, self.data_dims[0] // 4, self.data_dims[0] // 8,
                    self.data_dims[0] // 16]
         self.reg = reg
@@ -72,6 +74,8 @@ class VLadder(Network):
         self.target_placeholder = tf.placeholder(shape=[None]+self.data_dims, dtype=tf.float32, name="target_placeholder")
         self.is_training = tf.placeholder(tf.bool, name='phase')
 
+
+
         # Define inference network
         self.regularization = 0.0
         input_size = tf.shape(self.input_placeholder)[0]
@@ -127,6 +131,8 @@ class VLadder(Network):
                 tf.summary.scalar("latent2_kl", self.ladder2_reg)
                 self.regularization += self.ladder2_reg
 
+
+
         if self.num_layers >= 4:
             self.ilatent3_hidden = layers.inference2(self.ilatent2_hidden, is_training=self.is_training)
             if self.ladder3_dim > 0:
@@ -144,6 +150,8 @@ class VLadder(Network):
                     self.ladder3_reg = compute_mmd(self.iladder3_sample, prior_sample)
                 tf.summary.scalar("latent3_kl", self.ladder3_reg)
                 self.regularization += self.ladder3_reg
+
+
 
         # Define generative network
         self.ladders = {}
@@ -177,17 +185,25 @@ class VLadder(Network):
         else:
             tlatent1_state, glatent1_state = None, None
 
+        tf.constant([1])  # wtf how can this change the result
+
+
         if self.ladder0_dim > 0:
             self.ladder0_placeholder = tf.placeholder(shape=(None, self.ladder0_dim), dtype=tf.float32, name="ladder0")
             self.ladders['ladder0'] = [self.ladder0_placeholder, self.ladder0_dim, self.iladder0_sample]
             self.toutput = layers.generative0(tlatent1_state, self.iladder0_sample, is_training=self.is_training)
             self.goutput = layers.generative0(glatent1_state, self.ladder0_placeholder, reuse=True, is_training=False)
+
         elif tlatent1_state is not None:
             self.toutput = layers.generative0(tlatent1_state, None, is_training=self.is_training)
             self.goutput = layers.generative0(glatent1_state, None, reuse=True, is_training=False)
         else:
             print("Error: no active ladder")
             exit(0)
+
+
+        tf.constant([1]) # and this not
+
 
         # Loss and training operators
         self.reconstruction_loss = tf.reduce_mean(tf.abs(self.toutput - self.target_placeholder))
@@ -235,10 +251,12 @@ class VLadder(Network):
         _, recon_loss, reg_loss = self.sess.run([self.train_op, self.reconstruction_loss, self.regularization],
                                                 feed_dict=feed_dict)
         if self.iteration % 2000 == 0:
-            self.save_network()
+            pass
+            #self.save_network()
         if self.iteration % 20 == 0:
-            summary = self.sess.run(self.merged_summary, feed_dict=feed_dict)
-            self.writer.add_summary(summary, self.iteration)
+            pass
+            #summary = self.sess.run(self.merged_summary, feed_dict=feed_dict)
+            #self.writer.add_summary(summary, self.iteration)
         return recon_loss, reg_loss
 
     def test(self, batch_input, label=None):

@@ -76,8 +76,51 @@ def _mean_kernel(a, b):
     return tf.reduce_mean(tf.exp(-_mean_squared_difference(a, b) / dim))
 
 
-def compute_mmd(x, y):
+def compute_mmd2(x, y):
     return _mean_kernel(x, x) + _mean_kernel(y, y) - 2 * _mean_kernel(x, y)
+
+class Original2Mmd:
+    def compute_kernel(self, x, y):
+        x_size = tf.shape(x)[0]
+        y_size = tf.shape(y)[0]
+        dim = tf.shape(x)[1]
+        x = tf.expand_dims(x, 1)
+        y = tf.expand_dims(y, 0)
+        x = tf.tile(x, [1, y_size, 1]) # => x_size, y_size. dim
+        y = tf.tile(y, [x_size, 1, 1]) # => x_size, y_size. dim
+        return tf.reduce_mean(tf.square(x - y), axis=2)
+
+    def compute_kernel_normalized(self, x, y):
+        dim = tf.shape(x)[1]
+        return tf.reduce_mean(tf.exp(-self.compute_kernel(x, y) / tf.cast(dim, tf.float32)))
+
+    def compute_mmd(self, x, y, sigma_sqr=1.0):
+        x_kernel = self.compute_kernel_normalized(x, x)
+        y_kernel = self.compute_kernel_normalized(y, y)
+        xy_kernel = self.compute_kernel_normalized(x, y)
+        return x_kernel + y_kernel - 2 * xy_kernel
+
+def compute_kernel(x, y):
+    x_size = tf.shape(x)[0]
+    y_size = tf.shape(y)[0]
+    dim = tf.shape(x)[1]
+    print(1+1)
+    #tf.expand_dims([1], 1)
+    #tf.reduce_sum([1,2])
+    #ye = tf.expand_dims(y, 0)
+    tiled_y = tf.tile(tf.reshape(y, tf.stack([1, y_size, dim])), tf.stack([x_size, 1, 1]))
+    tiled_x = tf.tile(tf.reshape(x, tf.stack([x_size, 1, dim])), tf.stack([1, y_size, 1]))
+
+    red = tf.reduce_mean(tf.square(tiled_x - tiled_y), axis=2)
+    return tf.exp(-red / tf.cast(dim, tf.float32))
+
+
+def compute_mmd(x, y):
+    #return Original2Mmd().compute_mmd(x, y)
+    x_kernel = compute_kernel(x, x)
+    y_kernel = compute_kernel(y, y)
+    xy_kernel = compute_kernel(x, y)
+    return tf.reduce_mean(x_kernel) + tf.reduce_mean(y_kernel) - 2 * tf.reduce_mean(xy_kernel)
 
 
 class Network:
@@ -87,7 +130,7 @@ class Network:
         self.learning_rate_placeholder = tf.placeholder(shape=[], dtype=tf.float32, name="lr_placeholder")
 
         gpu_options = tf.GPUOptions(allow_growth=True)
-        self.sess = tf.InteractiveSession(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True))
+        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True))
         # A unique name should be given to each instance of subclasses during initialization
         self.name = "default"
 
