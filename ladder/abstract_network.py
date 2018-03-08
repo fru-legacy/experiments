@@ -71,13 +71,13 @@ def _mean_squared_difference(a, b):
     return tf.reduce_mean(tf.squared_difference(a, b), 2)
 
 
-def _mean_kernel(a, b=None):
-    dim = float(a.get_shape()[1])
-    return tf.reduce_mean(tf.exp(-_mean_squared_difference(a, b or a) / dim))
+def _mean_kernel(a, b):
+    dim = float(a.get_shape().as_list()[1])
+    return tf.reduce_mean(tf.exp(-_mean_squared_difference(a, b) / dim))
 
 
 def compute_mmd(x, y):
-    return _mean_kernel(x) + _mean_kernel(y) - 2 * _mean_kernel(x, y)
+    return _mean_kernel(x, x) + _mean_kernel(y, y) - 2 * _mean_kernel(x, y)
 
 
 class Network:

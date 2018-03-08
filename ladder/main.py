@@ -14,7 +14,7 @@ parser.add_argument('--dataset', type=str, default='mnist')
 parser.add_argument('--netname', type=str, default='')
 parser.add_argument('--batch_size', type=int, default=100)
 parser.add_argument('--db_path', type=str, default='/data')
-parser.add_argument('--reg', type=str, default='kl')
+parser.add_argument('--reg', type=str, default='mmd')
 parser.add_argument('--denoise_train', dest='denoise_train', action='store_true',
                     help='Use denoise training by adding Gaussian/salt and pepper noise')
 parser.add_argument('--plot_reconstruction', dest='plot_reconstruction', action='store_true',
