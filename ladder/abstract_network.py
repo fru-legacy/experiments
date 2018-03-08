@@ -130,7 +130,8 @@ class Network:
         self.learning_rate_placeholder = tf.placeholder(shape=[], dtype=tf.float32, name="lr_placeholder")
 
         gpu_options = tf.GPUOptions(allow_growth=True)
-        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True))
+        self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options, allow_soft_placement=True, inter_op_parallelism_threads=1,
+                        intra_op_parallelism_threads=1))
         # A unique name should be given to each instance of subclasses during initialization
         self.name = "default"
 
