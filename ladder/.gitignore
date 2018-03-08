@@ -1,0 +1,4 @@
+dataset/mnist/
+dataset/celeba/
+models/
+plots/

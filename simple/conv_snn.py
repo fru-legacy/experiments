@@ -2,6 +2,7 @@ import tensorflow as tf
 from helper.decorators import variable_scope
 from helper.alpha_dropout import alpha_dropout_enabled
 import L4
+from tensorflow.python.ops.control_flow_ops import with_dependencies
 
 class ConvSnn:
     def __init__(self, data):
@@ -31,7 +32,7 @@ class ConvSnn:
     def _optimize(self):
         self.cross_entropy = tf.losses.softmax_cross_entropy(self.label, self.prediction)
         return tf.train.AdamOptimizer().minimize(self.cross_entropy)
-        #return L4.L4Adam(fraction=0.20).minimize(cross_entropy)
+        #return L4.L4Adam(fraction=0.30).minimize(self.cross_entropy)
 
     @variable_scope
     def _error(self):
