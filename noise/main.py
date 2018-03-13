@@ -10,6 +10,7 @@ data = load_fashion_mnist(constant_tf_seed=True)
 model = NoiseAutoencoder(data)
 
 tf.summary.image('original', data.image, 1)
+tf.summary.image('test_deconv', model.test_deconv, 1)
 tf.summary.image('generated', model.generator_clipped, 1)
 tf.summary.scalar('error', model.cross_entropy)
 summary = tf.summary.merge_all()

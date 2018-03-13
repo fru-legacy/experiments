@@ -21,5 +21,3 @@ version: '2'
 volumes:
   nvidia_driver_384.111:
     external: true
-#networks:
-#  bridge:

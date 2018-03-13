@@ -2,6 +2,7 @@ import tensorflow as tf
 from helper.decorators import variable_scope
 from helper.alpha_dropout import alpha_dropout_enabled
 from tensorflow.contrib.keras.api.keras.initializers import lecun_normal
+from tested.image_patches import split_patches_into_batch, op_join_patches_from_batch
 import tensorflow.contrib.layers as layers
 
 
@@ -28,7 +29,10 @@ class NoiseAutoencoder:
 
     @variable_scope('latent')
     def _latent(self):
-        x = layers.conv2d(self.image, self.shape[0], **self.defaults, **self.kernel)
+        x = layers.conv2d(self.image, self.shape[0], **self.defaults, **self.kernel, activation_fn=None)
+        self.test_deconv = layers.convolution2d_transpose(x, self.channels, **self.kernel, activation_fn=None)
+
+
         self.size_before_reshape = x.get_shape().as_list()[1:]
         x = tf.reshape(x, [-1, self.shape[0]]) # add convolutions to the batch
         x = layers.fully_connected(x, self.shape[1], **self.defaults)
