@@ -28,9 +28,9 @@ class NoiseAutoencoder:
         self.generator_clipped = tf.clip_by_value(self.generator, 0, 1)
         self.generator_optimize = self._generator_optimize()
         self.restored = op_join_patches_from_batch(self.generator_clipped, self.original_image_size, patch_size=[4, 4], channels=data.channels)
-        self.latent_random = tf.random_uniform(tf.shape(self.latent), 0.0, 1.0)
-        self.discriminator_random = self._discriminator(self.latent_random, tf.constant([[0.0]]), reuse=False)
-        self.discriminator_latent = self._discriminator(self.latent, tf.constant([[1.0]]), reuse=True)
+        self.latent_random = tf.random_uniform(tf.shape(self.latent_image), 0.0, 1.0)
+        self.discriminator_random = self._discriminator(self.latent_random, 0.0, reuse=False)
+        self.discriminator_latent = self._discriminator(self.latent_image, 1.0, reuse=True)
         self.prediction_optimize = self._prediction_optimize()
         self.prediction_error = self._error()
 
@@ -58,13 +58,18 @@ class NoiseAutoencoder:
         self.cross_entropy = tf.losses.mean_squared_error(self.patches, self.generator)
         return tf.train.AdamOptimizer().minimize(self.cross_entropy)
 
+    def repeat_constant_as_shape(self, constant, shape):
+        dims = np.repeat(1, len(shape.get_shape()))
+        return tf.tile(tf.reshape(constant, dims), tf.shape(shape))
+
     @variable_scope('discriminator', reuse=tf.AUTO_REUSE)
     def _discriminator(self, latent, target, reuse):
         x = flip_gradient(latent)
         x = layers.fully_connected(x, self.shape[1], **self.defaults)
         x = layers.fully_connected(x, self.shape[2], **self.defaults)
         x = layers.fully_connected(x, 1, **self.defaults)
-        cross_entropy = tf.losses.mean_squared_error(x, tf.tile(target, tf.shape(x)))
+        target = self.repeat_constant_as_shape(target, x)
+        cross_entropy = tf.losses.mean_squared_error(x, target)
         return tf.train.AdamOptimizer().minimize(cross_entropy)
 
     @variable_scope
