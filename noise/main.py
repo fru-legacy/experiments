@@ -12,10 +12,10 @@ model = NoiseAutoencoder(data)
 
 tf.summary.image('original', data.image, 1)
 tf.summary.image('generated', model.restored, 1)
-tf.summary.image('latent', tf.reshape(model.latent, [-1, 8*8, 8*8, 1]), 1)
-tf.summary.image('random', tf.reshape(model.latent_random, [-1, 8*8, 8*8, 1]), 1)
+tf.summary.image('latent', model.latent_image, 1)
+#tf.summary.image('random', model.latent_random_image, 1)
 tf.summary.scalar('error', model.cross_entropy)
-#tf.summary.scalar('prediction', model.prediction_error)
+tf.summary.scalar('prediction', model.prediction_error)
 summary = tf.summary.merge_all()
 
 session = get_initialized_session(disable_gpu=False)
@@ -23,7 +23,13 @@ session = get_initialized_session(disable_gpu=False)
 summary_writer = tf.summary.FileWriter('../log/log-noise-09-03-2018', session.graph)
 summary_writer.add_session_log(SessionLog(status=SessionLog.START), 0)
 
-for e in range(6000):
-    log, _, _, _ = session.run([summary, model.generator_optimize, model.discriminator_latent, model.discriminator_random], {**data.next_batch(128)}) #, model.generator_optimize
+for e in range(60000):
+    batch = data.next_batch(128)
+    session.run(model.discriminator_latent, {**batch})
+    session.run(model.discriminator_random, {**batch})
+    session.run([model.prediction_optimize], {**batch})
+    session.run([summary, model.generator_optimize], {**batch})
+    session.run([summary, model.generator_optimize], {**batch})
+    log, _ = session.run([summary, model.generator_optimize], {**batch})
     summary_writer.add_summary(log, e)
     print(e)
