@@ -18,12 +18,13 @@ def op_join_patches_from_batch(patches, original_size, patch_size=[2, 2], channe
         batch_count = int(np.prod(patch_fragments.shape) / (np.prod(original_size) * channels))
         print(patch_fragments)
         return np.array([
-            patch_fragments[i_hor + rows_in_patch * patch_count[1] + i_ver * patch_size[0] * patch_count[1]]
-            for i_ver in range(patch_count[0]*batch_count)
-            # Secondly move to the next
-            for i_hor in range(patch_count[1])
-            # First output all in the current row of the current patch
-            for rows_in_patch in range(patch_size[0])
+            patch_fragments[y + x*patch_size[0] + section*patch_size[0]*patch_count[1]]
+            # Thirdly go to next section of patches
+            for section in range(patch_count[0]*batch_count)
+            # Secondly move to the next line
+            for y in range(patch_size[0])
+            # First iterate through all patches on the current line
+            for x in range(patch_count[1])
         ])
 
     result = tf.py_func(implementation, [patches], patches.dtype)
@@ -45,18 +46,18 @@ class _Tests(tf.test.TestCase):
         joined = op_join_patches_from_batch(patches, original_size, patch_size=patch_size, channels=channels)
 
         with tf.Session() as session:
-            joined.eval()
-            #self.assertAllEqual(tf.shape(patches).eval(), [np.prod(patch_count), np.prod(patch_size) * channels])
-            #self.assertAllEqual(indexes.eval(), joined.eval())
+            print(joined.eval())
+            self.assertAllEqual(tf.shape(patches).eval(), [np.prod(patch_count), np.prod(patch_size) * channels])
+            self.assertAllEqual(indexes.eval(), joined.eval())
 
     def testPatches(self):
-        # self._testIfPatchIsReversible(patch_count=[2, 2], patch_size=[2, 2], channels=1)
-        # self._testIfPatchIsReversible(patch_count=[2, 2], patch_size=[2, 2], channels=2)
-        # self._testIfPatchIsReversible(patch_count=[2, 2], patch_size=[2, 2], channels=3)
-        # self._testIfPatchIsReversible(patch_count=[1, 2], patch_size=[2, 2], channels=2)
-        # self._testIfPatchIsReversible(patch_count=[5, 5], patch_size=[1, 2], channels=2)
-        # self._testIfPatchIsReversible(patch_count=[5, 5], patch_size=[1, 2], channels=2)
-        # self._testIfPatchIsReversible(patch_count=[5, 5], patch_size=[1, 5], channels=2)
+        self._testIfPatchIsReversible(patch_count=[2, 2], patch_size=[2, 2], channels=1)
+        self._testIfPatchIsReversible(patch_count=[2, 2], patch_size=[2, 2], channels=2)
+        self._testIfPatchIsReversible(patch_count=[2, 2], patch_size=[2, 2], channels=3)
+        self._testIfPatchIsReversible(patch_count=[1, 2], patch_size=[2, 2], channels=2)
+        self._testIfPatchIsReversible(patch_count=[5, 5], patch_size=[1, 2], channels=2)
+        self._testIfPatchIsReversible(patch_count=[5, 5], patch_size=[1, 2], channels=2)
+        self._testIfPatchIsReversible(patch_count=[5, 5], patch_size=[1, 5], channels=2)
         self._testIfPatchIsReversible(patch_count=[3, 3], patch_size=[2, 2], channels=1)
 
 
