@@ -10,9 +10,8 @@ data = load_fashion_mnist(constant_tf_seed=True)
 model = NoiseAutoencoder(data)
 
 tf.summary.image('original', data.image, 1)
-tf.summary.image('test_deconv', model.test_deconv, 1)
-tf.summary.image('generated', model.generator_clipped, 1)
-tf.summary.scalar('error', model.cross_entropy)
+tf.summary.image('generated', model.restored, 1)
+#tf.summary.scalar('error', model.cross_entropy)
 summary = tf.summary.merge_all()
 
 session = get_initialized_session(disable_gpu=False)
@@ -20,7 +19,7 @@ session = get_initialized_session(disable_gpu=False)
 summary_writer = tf.summary.FileWriter('../log/log-noise-09-03-2018', session.graph)
 summary_writer.add_session_log(SessionLog(status=SessionLog.START), 0)
 
-for e in range(6000):
-    log, _ = session.run([summary, model.generator_optimize], {**data.next_batch(128)})
+for e in range(5):
+    log = session.run(summary, {**data.next_batch(128)}) #, model.generator_optimize
     summary_writer.add_summary(log, e)
     print(e)
