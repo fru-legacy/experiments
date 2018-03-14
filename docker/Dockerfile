@@ -5,9 +5,12 @@ RUN pip3 install torchvision
 
 RUN pip3 install git+https://github.com/martius-lab/l4-optimizer
 RUN pip3 install gpustat
+RUN pip3 install cached_property
 
 # Download celeba helper
 RUN pip3 install bs4 lxml
+
+
 
 ENV NB_USER fru
 ENV NB_UID 1000

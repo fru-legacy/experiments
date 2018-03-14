@@ -43,7 +43,7 @@ class NoiseAutoencoder:
         x = layers.fully_connected(x, self.shape[0], **self.defaults)
         return x
 
-    @variable_scope('generator')
+    @variable_scope#('generator')
     def _generator(self):
         x = self.latent
         x = x + tf.random_uniform(tf.shape(x), 0.0, 0.05)
@@ -51,9 +51,11 @@ class NoiseAutoencoder:
         x = layers.fully_connected(x, self.shape[1], **self.defaults)
         x = alpha_dropout_enabled(x, 0.8, self.dropout_enabled)
         x = layers.fully_connected(x, self.patches_size, **self.defaults)
+
+        test = tf.get_variable_scope().get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
         return x
 
-    @variable_scope()
+    @variable_scope
     def _generator_optimize(self):
         self.cross_entropy = tf.losses.mean_squared_error(self.patches, self.generator)
         return tf.train.AdamOptimizer().minimize(self.cross_entropy)
@@ -61,9 +63,9 @@ class NoiseAutoencoder:
     @variable_scope('discriminator', reuse=tf.AUTO_REUSE)
     def _discriminator(self, latent, target, reuse):
         x = flip_gradient(latent)
-        x = layers.fully_connected(x, self.shape[0], scope="t1", **self.defaults, reuse=tf.AUTO_REUSE)
-        x = layers.fully_connected(x, self.shape[1], scope="t2", **self.defaults)
-        x = layers.fully_connected(x, 1, scope="t3", **self.defaults)
+        x = layers.fully_connected(x, self.shape[0], **self.defaults)
+        x = layers.fully_connected(x, self.shape[1], **self.defaults)
+        x = layers.fully_connected(x, 1, **self.defaults)
         cross_entropy = tf.losses.mean_squared_error(x, tf.tile(target, tf.shape(x)))
         return tf.train.AdamOptimizer().minimize(cross_entropy)
 
