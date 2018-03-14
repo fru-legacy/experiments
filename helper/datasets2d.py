@@ -35,6 +35,7 @@ class _Dataset2D():
         self.height = height
         self.target = target
         self.channels = channels
+        self.image_size = [height, width]
         self.dim_image = [width, height, channels]
         self.dim_flat = np.prod(self.dim_image)
 
