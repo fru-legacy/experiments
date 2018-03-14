@@ -16,7 +16,6 @@ def op_join_patches_from_batch(patches, original_size, patch_size=[2, 2], channe
         patch_fragments = np.reshape(patches_numpy, [-1, patch_size[1] * channels])
         patch_count = np.divide(original_size, patch_size).astype(int).tolist()
         batch_count = int(np.prod(patch_fragments.shape) / (np.prod(original_size) * channels))
-        print(patch_fragments)
         return np.array([
             patch_fragments[y + x*patch_size[0] + section*patch_size[0]*patch_count[1]]
             # Thirdly go to next section of patches

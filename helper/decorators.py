@@ -27,8 +27,8 @@ def variable_scope(f, scope=None, *args, **kwargs):
     name = scope or f.__name__.replace('_', '')
 
     @functools.wraps(f)
-    def decorator(self):
+    def decorator(self, *fargs, **fkwargs):
         with tensorflow.variable_scope(name, *args, **kwargs):
-            return f(self)
+            return f(self, *fargs, **fkwargs)
 
     return decorator
