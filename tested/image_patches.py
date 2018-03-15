@@ -3,7 +3,7 @@ import tensorflow as tf
 import numpy as np
 
 
-def split_patches_into_batch(images, patch_size=[2, 2], channels=1, reversible=False):
+def split_into_patches(images, patch_size=[2, 2], channels=1, reversible=False):
     kernel = [1] + patch_size + [1]
     stride = kernel if reversible else [1, 1, 1, 1]
     result = tf.extract_image_patches(images, kernel, strides=stride, rates=[1, 1, 1, 1], padding='VALID')
@@ -14,7 +14,7 @@ def split_patches_into_batch(images, patch_size=[2, 2], channels=1, reversible=F
     return tf.reshape(result, [-1, size]), size, count
 
 
-def op_join_patches_from_batch(patches, original_size, patch_size=[2, 2], channels=1):
+def join_patches(patches, original_size, patch_size=[2, 2], channels=1):
 
     def implementation(patches_numpy):
         patch_fragments = np.reshape(patches_numpy, [-1, patch_size[1] * channels])
@@ -45,8 +45,8 @@ class _Tests(tf.test.TestCase):
     def _testIfPatchIsReversible(self, patch_count, patch_size, channels):
         original_size = np.multiply(patch_count, patch_size).tolist()
         indexes = tf.tile(_get_index_shape([1] + original_size + [1]), [1, 1, 1, channels])
-        patches, _, _ = split_patches_into_batch(indexes, reversible=True, patch_size=patch_size, channels=channels)
-        joined = op_join_patches_from_batch(patches, original_size, patch_size=patch_size, channels=channels)
+        patches, _, _ = split_into_patches(indexes, reversible=True, patch_size=patch_size, channels=channels)
+        joined = join_patches(patches, original_size, patch_size=patch_size, channels=channels)
 
         with tf.Session() as session:
             print(joined.eval())

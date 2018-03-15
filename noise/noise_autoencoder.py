@@ -2,7 +2,7 @@ import tensorflow as tf
 from helper.decorators import scope
 from helper.alpha_dropout import alpha_dropout_enabled
 from tensorflow.contrib.keras.api.keras.initializers import lecun_normal
-from tested.image_patches import split_patches_into_batch, op_join_patches_from_batch
+from tested.image_patches import split_into_patches, join_patches
 import tensorflow.contrib.layers as layers
 import numpy as np
 from helper.flip_gradient import flip_gradient
@@ -18,7 +18,7 @@ class NoiseAutoencoder:
         self.label = data.label
         self.channels = data.channels
 
-        patches = split_patches_into_batch(self.image, patch_size=[4, 4], channels=data.channels, reversible=True)
+        patches = split_into_patches(self.image, patch_size=[4, 4], channels=data.channels, reversible=True)
         self.patches, self.patches_size, self.patches_count = patches
 
         self.dropout_enabled = tf.placeholder_with_default(True, shape=())
@@ -30,7 +30,7 @@ class NoiseAutoencoder:
         # Network
         self.generator_clipped = tf.clip_by_value(self.generator, 0, 1)
         #self.generator_optimize = self._generator_optimize()
-        self.restored = op_join_patches_from_batch(self.generator_clipped, self.image_size, patch_size=[4, 4], channels=data.channels)
+        self.restored = join_patches(self.generator_clipped, self.image_size, patch_size=[4, 4], channels=data.channels)
         self.latent_random = tf.random_uniform(tf.shape(self.latent_image), 0.0, 1.0)
         self.discriminator_random = self._discriminator(self.latent_random, 0.0, reuse=False)
         self.discriminator_latent = self._discriminator(self.latent_image, 1.0, reuse=True)
@@ -66,7 +66,7 @@ class NoiseAutoencoder:
         cross_entropy = tf.losses.mean_squared_error(self.patches, self.generator)
         tf.summary.scalar('error', cross_entropy)
         generator_clipped = tf.clip_by_value(self.generator, 0, 1)
-        self.restored = op_join_patches_from_batch(generator_clipped, self.data.image_size, patch_size=[4, 4],
+        self.restored = join_patches(generator_clipped, self.data.image_size, patch_size=[4, 4],
                                               channels=self.data.channels)
         tf.summary.image('generated', self.restored, 1)
         return tf.train.AdamOptimizer().minimize(cross_entropy)

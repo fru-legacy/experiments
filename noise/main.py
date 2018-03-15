@@ -7,7 +7,10 @@ from noise.noise_autoencoder import NoiseAutoencoder
 from tensorflow.core.util.event_pb2 import SessionLog
 #from tensorboard.plugins.beholder.beholder import Beholder
 
-data = load_fashion_mnist(constant_tf_seed=True)
+np.random.seed(0)
+tf.set_random_seed(0)
+
+data = load_fashion_mnist()
 model = NoiseAutoencoder(data)
 
 tf.summary.image('original', data.image, 1)
