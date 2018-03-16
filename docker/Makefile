@@ -18,8 +18,9 @@ rebuild:
 	docker-compose build
 
 docker-clean:
-	docker rmi \$(docker images -a --filter=dangling=true -q) &\
-	docker rm  \$(docker ps --filter=status=exited --filter=status=created -q)
+	docker system prune -f &\
+	docker rmi \$(docker images -a -q) &\
+	docker rm  \$(docker ps -q)
 
 run:
 	$(COMPOSE) bash -c "$(RUN_MAIN)"
