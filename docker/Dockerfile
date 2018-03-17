@@ -10,6 +10,9 @@ RUN pip3 install cached_property
 # Download celeba helper
 RUN pip3 install bs4 lxml
 
+# Install tf-data
+RUN pip3 install requests tqdm tf-data
+
 # Use tensorboard nightly
 RUN pip3 install --upgrade tb-nightly
 

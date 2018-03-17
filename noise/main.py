@@ -1,11 +1,17 @@
 import tensorflow as tf
 import numpy as np
 
-from helper.datasets2d import load_fashion_mnist
 from helper.helper import get_initialized_session, next_batch_curry
 from noise.noise_autoencoder import NoiseAutoencoder
 from tensorflow.core.util.event_pb2 import SessionLog
 from tensorboard.plugins.beholder.beholder import Beholder
+
+# Only for module testing purposes
+import sys
+# sys.path.insert(0, '/github/tf-data')
+import tf_data
+
+test = tf_data.mnist('/data/tf-data-test2')
 
 np.random.seed(0)
 tf.set_random_seed(0)

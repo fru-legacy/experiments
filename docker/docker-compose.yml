@@ -12,6 +12,7 @@ services:
     - /dev/nvidia-uvm
     volumes:
     - ~/experiments:/src
+    - ~/Dokumente/GitHub:/github
     - ~/datasets:/data
     - ~/datasets:/home/fru/.keras/datasets
     - ~/datasets:/tmp/.keras/datasets

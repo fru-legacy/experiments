@@ -15,7 +15,7 @@ RUN_GPU_WATCH=watch --color -n1.0 gpustat --color
 OPEN_TENSORBOARD=sleep 4 && google-chrome http://0.0.0.0:6006
 
 rebuild:
-	docker-compose build
+	docker-compose build --no-cache
 
 docker-clean:
 	docker system prune -f &\
