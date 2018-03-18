@@ -24,16 +24,6 @@ def get_initialized_session(disable_gpu=False):
     return session
 
 
-def next_batch(num, full):
-    """
-    Return a total of `num` random samples and labels.
-    """
-    data, labels = full
-    idx = np.arange(0, len(data))
-    np.random.shuffle(idx)
-    idx = idx[:num]
-    return data[idx], labels[idx]
-
-
-def next_batch_curry(num):
-    return partial(next_batch, num)
+def repeat_constant_as_shape(constant, shape):
+    dims = np.repeat(1, len(shape.get_shape()))
+    return tf.tile(tf.reshape(constant, dims), tf.shape(shape))
