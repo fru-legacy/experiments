@@ -6,7 +6,7 @@ def scope(name=None, cached_property=False, *decorator_args, **decorator_kwargs)
 
     def instantiate(f):
         def f_scoped(self, *call_args, **call_kwargs):
-            scope_name = name or f.__name__.replace('_', '')
+            scope_name = name or f.__name__
             with tf.variable_scope(scope_name, *decorator_args, **decorator_kwargs):
                 return f(self, *call_args, **call_kwargs)
         f_scoped.__name__ = f.__name__

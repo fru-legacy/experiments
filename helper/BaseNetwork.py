@@ -35,6 +35,9 @@ class BaseNetwork:
         defaults = {'activation_fn': tf.nn.selu, 'weights_initializer': lecun_normal()}
         return tf.contrib.layers.fully_connected(x, size, **defaults)
 
+    def get_current_trainable_vars(self):
+        tf.get_variable_scope().get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+
     def run(self, data_generator, iteration, steps, is_training):
         if not self.has_run_initialized:
             self.execute = self.get_optimizers()
@@ -47,7 +50,7 @@ class BaseNetwork:
         for e in range(steps):
             data = data_generator()
             log, _ = self.session.run([self.summary, self.execute], {**data, self.is_training: is_training})
-            self.summary_writer.add_summary(log, iteration)
+            self.summary_writer.add_summary(log, iteration+e)
             print('Iteration', e)
 
 
