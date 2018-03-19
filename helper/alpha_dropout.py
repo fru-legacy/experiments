@@ -28,11 +28,6 @@ from tensorflow.python.ops import gen_math_ops
 from tensorflow.python.ops import math_ops
 
 
-def alpha_dropout_enabled(x, keep_prob, enabled, **kwargs):
-    keep_prob = tf.where(enabled, keep_prob, 1.0)
-    return alpha_dropout(x, keep_prob, **kwargs)
-
-
 def alpha_dropout(x, keep_prob, noise_shape=None, seed=None, name=None): # pylint: disable=invalid-name
   """Computes alpha dropout.
 
