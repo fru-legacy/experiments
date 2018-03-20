@@ -45,3 +45,8 @@ bash:
 
 stop-all:
 	docker stop $$(docker ps -aq)
+
+publish-docker:
+	docker build -t fru/experiments:latest ./google-cloud/
+	docker tag fru/experiments:latest gcr.io/projekt-ai/experiments
+	gcloud docker -- push gcr.io/projekt-ai/experiments
