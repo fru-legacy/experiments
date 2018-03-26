@@ -7,4 +7,4 @@ from Noise0Autoencoder import Noise0Autoencoder
 
 data = tf_data.fashion_mnist('/data/tf-data').placeholder()
 model = Noise0Autoencoder(data)
-model.run(lambda: data.train(batch_size=1024), 0, steps=500, is_training=True)
+model.run(lambda: data.train(batch_size=256), 0, steps=1, is_training=True)
