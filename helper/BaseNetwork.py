@@ -44,9 +44,9 @@ class BaseNetwork:
 
     def run(self, data_generator, iteration, steps, is_training):
         if not self.has_run_initialized:
-            self.execute = self.get_optimizers()
+            self.execute = tf.group(*self.get_optimizers())
             self.summary = tf.summary.merge_all()
-            self.session = get_initialized_session(disable_gpu=False)
+            self.session = get_initialized_session(disable_gpu=True)
             self.summary_writer = tf.summary.FileWriter('./log/' + self.log_name, self.session.graph)
             self.summary_writer.add_session_log(SessionLog(status=SessionLog.START), 0)
             self.has_run_initialized = True
