@@ -30,9 +30,14 @@ class Noise0Autoencoder(BaseNetwork):
         # Network
 
         self.latent_input = tf.layers.flatten(self.data.image_byte * 2 - 1)
-        self.latent_input_normalized = tf.concat([self.latent_input, -self.latent_input], axis=1)
         self.create_generator_summary()
         self.optimizers.append(self.generator_optimize)
+
+    # Selu needs stddev = 1 and mean = 0
+
+    @scope(cached_property=True)
+    def latent_input_normalized(self):
+        return tf.concat([self.latent_input, -self.latent_input], axis=1)
 
     # Log mean, variance and the histogram of a tensor
 
