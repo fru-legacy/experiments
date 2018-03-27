@@ -16,31 +16,12 @@ class Noise0Autoencoder(BaseNetwork):
         #self.add_control_linear_regression('latent', self.latent)
         self.create_generator_summary()
         #tf.summary.scalar('linear regress', 0)
-        self.optimizers.append(self.generator_optimize)
+        #self.optimizers.append(self.generator_optimize)
 
     # TODO: how will epsilon affect reconstruction
     epsilon = 1.0 / (255 * 8)
 
-    def image_normal_encoding_single(self, repeat):
-        direction = tf.tile(self.data.image_byte, [1, 1, repeat]) * 2 - 1
-        normal = tf.abs(tf.random_normal(tf.shape(direction)))
-        return tf.expand_dims(tf.multiply(normal, direction), -1)
-
-    @scope(cached_property=True)
-    def image_normal_encoding(self, repeat=1):
-        e1 = self.image_normal_encoding_single(repeat)
-        e2 = self.image_normal_encoding_single(repeat)
-        return tf.layers.flatten(tf.concat([e1, -e2], axis=-1))
-
-    def image_normal_cross_entropy(self, result):
-        restored = self.image_normal_restored(result)
-        return tf.losses.mean_squared_error(self.data.image, restored)
-        # assert(result.get_shape().as_list() == [None, self.image_normal_base])
-        # one_hot_bytes = tf.one_hot(tf.cast(self.data.image_byte, tf.int32), 2)
-        # one_hot_result = tf.reshape(result, [-1] + self.image_normal_dims)
-        # return tf.losses.softmax_cross_entropy(one_hot_bytes, one_hot_result)
-
-    def image_normal_restored(self, result):
+    def image_from_binary(self, result):
         test = tf.reshape(result, [-1] + self.image_normal_dims)
         #test = tf.Print(test, [test[0][300][3]], summarize=16)
         softmax = tf.nn.softmax(tf.nn.leaky_relu(test))
@@ -67,8 +48,10 @@ class Noise0Autoencoder(BaseNetwork):
 
     @scope(cached_property=True)
     def latent(self):
-        x = self.image_normal_encoding
-        Noise0Autoencoder.log_distribution('input', x)
+        x = self.data.image_byte * 2 - 1
+        # x = self.fully_connected(x, self.image_normal_base // 8)
+        # x = self.fully_connected(x, self.image_normal_base // 8)
+        Noise0Autoencoder.log_distribution('latent', x)
         #x = self.fully_connected(x, self.base)
         #x = self.fully_connected(x, self.base * 2)
         #x = self.fully_connected(x, self.base * 2)
@@ -79,9 +62,9 @@ class Noise0Autoencoder(BaseNetwork):
     @scope(cached_property=True)
     def latent_minimum_noise(self):
         x = self.latent
-        x = self.fully_connected(x, self.image_normal_base // 8)
-        x = self.fully_connected(x, self.image_normal_base // 8)
-        x = x + tf.random_normal(tf.shape(x), stddev=Noise0Autoencoder.epsilon)
+        # x = self.fully_connected(x, self.image_normal_base // 8)
+        # x = self.fully_connected(x, self.image_normal_base // 8)
+        # x = x + tf.random_normal(tf.shape(x), stddev=Noise0Autoencoder.epsilon)
         return x
 
     @staticmethod
@@ -96,8 +79,8 @@ class Noise0Autoencoder(BaseNetwork):
         x = self.latent_minimum_noise
         #x = self.fully_connected(x, self.base * 2)
         #x = self.fully_connected(x, self.base * 2)
-        x = self.fully_connected(x, self.image_normal_base // 8)
-        x = self.fully_connected(x, self.image_normal_base)
+        # x = self.fully_connected(x, self.image_normal_base // 8)
+        # x = self.fully_connected(x, self.image_normal_base)
         for i, var in enumerate(self.get_current_trainable_vars()):
             if len(var.get_shape()) == 2:
                 Noise0Autoencoder.log_distribution(str(i), var)
@@ -111,4 +94,4 @@ class Noise0Autoencoder(BaseNetwork):
     def generator_optimize(self):
         x = self.image_normal_cross_entropy(self.generator)
         tf.summary.scalar('cross_entropy', x)
-        return tf.train.AdamOptimizer(learning_rate=1e-4).minimize(x)
+        return tf.train.RMSPropOptimizer(learning_rate=1e-4).minimize(x)
