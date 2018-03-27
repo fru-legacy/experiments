@@ -37,7 +37,12 @@ class Noise0Autoencoder(BaseNetwork):
 
     @scope(cached_property=True)
     def latent_input_normalized(self):
-        return tf.concat([self.latent_input, -self.latent_input], axis=1)
+        e1 = tf.random_normal(tf.shape(self.latent_input))
+        #e1 = self.latent_input * 0.8 + tf.random_normal(tf.shape(self.latent_input), stddev=0.5)
+        #e2 = self.latent_input * 0.8 + tf.random_normal(tf.shape(self.latent_input), stddev=0.5)
+        #e1 = self.latent_input
+        #e2 = self.latent_input
+        return tf.concat([e1, -e1], axis=1)
 
     # Log mean, variance and the histogram of a tensor
 
@@ -79,6 +84,8 @@ class Noise0Autoencoder(BaseNetwork):
         Noise0Autoencoder.log_distribution('latent', x)
         x = self.fully_connected(x, self.generator_size//4)
         x = self.fully_connected(x, self.generator_size//4)
+        for i, var in enumerate(self.get_current_trainable_vars()):
+            Noise0Autoencoder.log_distribution(str(i), var)
         return x
 
     @scope(cached_property=True)
