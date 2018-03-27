@@ -30,8 +30,8 @@ class Noise0Autoencoder(BaseNetwork):
         # Network
 
         self.latent_input = tf.layers.flatten(self.data.image_byte * 2 - 1)
-        self.create_generator_summary()
-        self.optimizers.append(self.generator_optimize)
+        #self.create_generator_summary()
+        self.optimizers.append(self.optimize_labels)
 
     # Selu needs stddev = 1 and mean = 0
 
@@ -79,13 +79,11 @@ class Noise0Autoencoder(BaseNetwork):
     @scope(cached_property=True)
     def latent(self):
         x = self.latent_input_normalized
-        Noise0Autoencoder.log_distribution('input', x)
+        #Noise0Autoencoder.log_distribution('input', x)
         x = self.fully_connected(x, self.generator_size//4)
         Noise0Autoencoder.log_distribution('latent', x)
         x = self.fully_connected(x, self.generator_size//4)
         x = self.fully_connected(x, self.generator_size//4)
-        for i, var in enumerate(self.get_current_trainable_vars()):
-            Noise0Autoencoder.log_distribution(str(i), var)
         return x
 
     @scope(cached_property=True)
@@ -93,7 +91,6 @@ class Noise0Autoencoder(BaseNetwork):
         x = self.latent_minimum_noise
         x = self.fully_connected(x, self.generator_size//4)
         x = self.fully_connected(x, self.generator_size//4)
-        x = self.fully_connected(x, self.generator_size)
         return x
 
     @scope(cached_property=True)
@@ -102,7 +99,8 @@ class Noise0Autoencoder(BaseNetwork):
 
     @scope(cached_property=True)
     def restored(self):
-        raw = self.restore_image_raw(self.restore_image_tanh(self.generator))
+        connected = self.fully_connected(self.generator, self.generator_size, plain=True)
+        raw = self.restore_image_raw(self.restore_image_tanh(connected))
         return tf.reshape(raw, [-1] + self.data.info.dim_image)
 
     def create_generator_summary(self):
@@ -110,7 +108,14 @@ class Noise0Autoencoder(BaseNetwork):
         tf.summary.image('original', self.data.image, 1)
 
     @scope(cached_property=True)
-    def generator_optimize(self):
+    def optimize_generator(self):
         x = tf.losses.mean_squared_error(self.data.image, self.restored)
+        tf.summary.scalar('cross_entropy', x)
+        return tf.train.RMSPropOptimizer(self.learning_rate).minimize(x)
+
+    @scope(cached_property=True)
+    def optimize_labels(self):
+        generated_labels = self.fully_connected(self.generator, 10, plain=True)
+        x = tf.losses.softmax_cross_entropy(self.data.label_one_hot, generated_labels)
         tf.summary.scalar('cross_entropy', x)
         return tf.train.RMSPropOptimizer(self.learning_rate).minimize(x)
