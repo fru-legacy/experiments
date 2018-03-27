@@ -37,7 +37,7 @@ class BaseNetwork:
             return tf.layers.dense(x, size)
 
         defaults = {'activation_fn': tf.nn.selu, 'weights_initializer': lecun_normal()}
-        return tf.contrib.layers.fully_connected(x, size, **defaults)
+        return tf.contrib.layers.fully_connected(x, size, **defaults, biases_initializer=None)
 
     def get_current_trainable_vars(self, expected_count=None):
         prefix = tf.get_variable_scope().name
