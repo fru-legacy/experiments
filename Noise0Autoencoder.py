@@ -16,7 +16,7 @@ class Noise0Autoencoder(BaseNetwork):
         # Parameter
 
         self.latent_stddev = 1.0 / (255 * 8)
-        self.learning_rate = 1e-4
+        self.learning_rate = 1e-5
         self.restore_compare_k = 1
         self.restore_stddev = 0.02
         self.restore_classes = 8
@@ -30,19 +30,35 @@ class Noise0Autoencoder(BaseNetwork):
         # Network
 
         self.latent_input = tf.layers.flatten(self.data.image_byte * 2 - 1)
-        #self.create_generator_summary()
-        self.optimizers.append(self.optimize_labels)
+        self.create_generator_summary()
+        self.optimizers.append(self.optimize_generator)
 
     # Selu needs stddev = 1 and mean = 0
 
+    def image_normal_encoding_single(self, repeat=8):
+        direction = tf.tile(self.data.image_byte, [1, 1, repeat]) * 2 - 1
+        normal = tf.abs(tf.random_normal(tf.shape(direction)))
+        return tf.layers.flatten(tf.multiply(normal, direction))
+
     @scope(cached_property=True)
-    def latent_input_normalized(self):
-        e1 = tf.random_normal(tf.shape(self.latent_input))
-        #e1 = self.latent_input * 0.8 + tf.random_normal(tf.shape(self.latent_input), stddev=0.5)
-        #e2 = self.latent_input * 0.8 + tf.random_normal(tf.shape(self.latent_input), stddev=0.5)
-        #e1 = self.latent_input
-        #e2 = self.latent_input
-        return tf.concat([e1, -e1], axis=1)
+    def latent_input_normalized_version1(self):
+        e1 = self.image_normal_encoding_single()
+        e2 = self.image_normal_encoding_single()
+        return tf.concat([e1, -e2], axis=1)
+
+    @scope(cached_property=True)
+    def latent_input_normalized_version2(self):
+        e1 = tf.random_normal(tf.shape(self.latent_input), mean=self.latent_input / 1.5, stddev=0.8)
+        e2 = tf.random_normal(tf.shape(self.latent_input), mean=self.latent_input / 1.5, stddev=0.8)
+        return tf.concat([e1, -e2], axis=1)
+
+    @scope(cached_property=True)
+    def latent_input_normalized_version3(self):
+        return tf.concat([self.latent_input], axis=1)
+
+    @scope(cached_property=True)
+    def latent_input_normalized_base(self):
+        return tf.random_normal(tf.shape(self.latent_input))
 
     # Log mean, variance and the histogram of a tensor
 
@@ -78,8 +94,18 @@ class Noise0Autoencoder(BaseNetwork):
 
     @scope(cached_property=True)
     def latent(self):
-        x = self.latent_input_normalized
-        x = self.fully_connected(x, self.generator_size // 4)
+        x = self.latent_input_normalized_base
+        Noise0Autoencoder.log_distribution('input', x)
+        x = self.fully_connected(x, self.generator_size // 40)
+        x = self.fully_connected(x, self.generator_size // 40)
+        x = self.fully_connected(x, self.generator_size // 40)
+        x = self.fully_connected(x, self.generator_size // 40)
+        x = self.fully_connected(x, self.generator_size // 40)
+        x = self.fully_connected(x, self.generator_size // 40)
+        x = self.fully_connected(x, self.generator_size // 40)
+        x = self.fully_connected(x, self.generator_size // 40)
+        x = self.fully_connected(x, self.generator_size // 40)
+        x = self.fully_connected(x, self.generator_size // 40)
         Noise0Autoencoder.log_distribution('latent', x)
         x = self.fully_connected(x, self.generator_size // 4)
         x = self.fully_connected(x, self.generator_size // 4)
