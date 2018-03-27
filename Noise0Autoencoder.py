@@ -21,11 +21,16 @@ class Noise0Autoencoder(BaseNetwork):
     # TODO: how will epsilon affect reconstruction
     epsilon = 1.0 / (255 * 8)
 
-    @scope(cached_property=True)
-    def image_normal_encoding(self, repeat=1):
+    def image_normal_encoding_single(self, repeat):
         direction = tf.tile(self.data.image_byte, [1, 1, repeat]) * 2 - 1
         normal = tf.abs(tf.random_normal(tf.shape(direction)))
-        return tf.layers.flatten(tf.multiply(normal, direction))
+        return tf.expand_dims(tf.multiply(normal, direction), -1)
+
+    @scope(cached_property=True)
+    def image_normal_encoding(self, repeat=1):
+        e1 = self.image_normal_encoding_single(repeat)
+        e2 = self.image_normal_encoding_single(repeat)
+        return tf.layers.flatten(tf.concat([e1, -e2], axis=-1))
 
     def image_normal_cross_entropy(self, result):
         restored = self.image_normal_restored(result)
@@ -36,8 +41,12 @@ class Noise0Autoencoder(BaseNetwork):
         # return tf.losses.softmax_cross_entropy(one_hot_bytes, one_hot_result)
 
     def image_normal_restored(self, result):
-        softmax = tf.nn.softmax(tf.reshape(result, [-1] + self.image_normal_dims))
+        test = tf.reshape(result, [-1] + self.image_normal_dims)
+        #test = tf.Print(test, [test[0][300][3]], summarize=16)
+        softmax = tf.nn.softmax(tf.nn.leaky_relu(test))
+        #softmax = tf.Print(softmax, [softmax[0][300][3]], summarize=16)
         encoded = tf.slice(softmax, [0, 0, 0, 0], [-1, -1, -1, 1])
+        encoded = tf.reduce_sum(encoded, -1)
         return tf.reshape(Noise0Autoencoder.pack_bits_to_uint8(encoded), [-1] + self.data.info.dim_image)
 
     @staticmethod
@@ -59,10 +68,7 @@ class Noise0Autoencoder(BaseNetwork):
     @scope(cached_property=True)
     def latent(self):
         x = self.image_normal_encoding
-        print(x.get_shape())
-        mean, variance = tf.nn.moments(x, axes=list(range(2)))
-        tf.summary.scalar('mean x', mean)
-        tf.summary.scalar('variance x', variance)
+        Noise0Autoencoder.log_distribution('input', x)
         #x = self.fully_connected(x, self.base)
         #x = self.fully_connected(x, self.base * 2)
         #x = self.fully_connected(x, self.base * 2)
@@ -78,6 +84,13 @@ class Noise0Autoencoder(BaseNetwork):
         x = x + tf.random_normal(tf.shape(x), stddev=Noise0Autoencoder.epsilon)
         return x
 
+    @staticmethod
+    def log_distribution(name, data):
+        mean, variance = tf.nn.moments(data, axes=list(range(len(data.get_shape()))))
+        tf.summary.scalar('mean ' + name, mean)
+        tf.summary.scalar('variance ' + name, variance)
+        tf.summary.histogram('normal' + name, data)
+
     @scope(cached_property=True)
     def generator(self):
         x = self.latent_minimum_noise
@@ -86,12 +99,8 @@ class Noise0Autoencoder(BaseNetwork):
         x = self.fully_connected(x, self.image_normal_base // 8)
         x = self.fully_connected(x, self.image_normal_base)
         for i, var in enumerate(self.get_current_trainable_vars()):
-            tf.summary.histogram('normal' + str(i), var)
             if len(var.get_shape()) == 2:
-                mean, variance = tf.nn.moments(var, axes=list(range(2)))
-                tf.summary.scalar('mean ' + str(i), mean)
-                tf.summary.scalar('variance ' + str(i), variance)
-
+                Noise0Autoencoder.log_distribution(str(i), var)
         return x
 
     def create_generator_summary(self):

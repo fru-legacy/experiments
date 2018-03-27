@@ -53,10 +53,10 @@ class BaseNetwork:
             self.session = get_initialized_session(disable_gpu=False)
             self.summary_writer = tf.summary.FileWriter('./log/' + self.log_name, self.session.graph)
             self.saver = tf.train.Saver()
-            self.saver_path = './log/' + self.log_name + '.ckpt'
+            self.saver_path = './log/checkpoint_' + self.log_name
 
-            if os.path.exists(self.saver_path):
-                self.saver.restore(self.session, self.saver_path)
+            if os.path.exists(self.saver_path) and False:
+                self.saver.restore(self.session, self.saver_path + '/model.ckpt')
             else:
                 self.summary_writer.add_session_log(SessionLog(status=SessionLog.START), 0)
 
@@ -64,5 +64,5 @@ class BaseNetwork:
             data = data_generator()
             log, _ = self.session.run([self.summary, self.execute], {**data, self.is_training: is_training})
             self.summary_writer.add_summary(log, iteration+e)
-            self.saver.save(self.session, self.saver_path)
+            self.saver.save(self.session, self.saver_path + '/model.ckpt')
             print('Iteration', e)
