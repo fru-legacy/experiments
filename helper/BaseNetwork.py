@@ -1,8 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import os
-from tensorflow.contrib.keras.api.keras.initializers import lecun_normal
-from helper.alpha_dropout import alpha_dropout
+from helper.selu import selu, initializer, dropout_selu
 from tensorflow.core.util.event_pb2 import SessionLog
 from helper.helper import get_initialized_session
 
@@ -29,14 +28,13 @@ class BaseNetwork:
         return self.optimizers
 
     def alpha_dropout(self, x, keep_prob):
-        keep_prob = tf.where(self.is_training, keep_prob, 1.0)
-        return alpha_dropout(x, keep_prob)
+        return dropout_selu(x, keep_prob, training=self.is_training)
 
     def fully_connected(self, x, size, plain=False):
         if plain:
             return tf.layers.dense(x, size)
 
-        defaults = {'activation_fn': tf.nn.selu, 'weights_initializer': lecun_normal()}
+        defaults = {'activation_fn': selu, 'weights_initializer': initializer}
         return tf.contrib.layers.fully_connected(x, size, **defaults, biases_initializer=None)
 
     def get_current_trainable_vars(self, expected_count=None):

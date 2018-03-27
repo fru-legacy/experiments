@@ -79,18 +79,17 @@ class Noise0Autoencoder(BaseNetwork):
     @scope(cached_property=True)
     def latent(self):
         x = self.latent_input_normalized
-        #Noise0Autoencoder.log_distribution('input', x)
-        x = self.fully_connected(x, self.generator_size//4)
+        x = self.fully_connected(x, self.generator_size // 4)
         Noise0Autoencoder.log_distribution('latent', x)
-        x = self.fully_connected(x, self.generator_size//4)
-        x = self.fully_connected(x, self.generator_size//4)
+        x = self.fully_connected(x, self.generator_size // 4)
+        x = self.fully_connected(x, self.generator_size // 4)
         return x
 
     @scope(cached_property=True)
     def generator(self):
         x = self.latent_minimum_noise
-        x = self.fully_connected(x, self.generator_size//4)
-        x = self.fully_connected(x, self.generator_size//4)
+        x = self.fully_connected(x, self.generator_size // 4)
+        x = self.fully_connected(x, self.generator_size // 4)
         return x
 
     @scope(cached_property=True)
