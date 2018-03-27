@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import os
 from tensorflow.contrib.keras.api.keras.initializers import lecun_normal
 from helper.alpha_dropout import alpha_dropout
 from tensorflow.core.util.event_pb2 import SessionLog
@@ -20,6 +21,8 @@ class BaseNetwork:
         self.session = None
         self.summary = None
         self.summary_writer = None
+        self.saver = None
+        self.saver_path = None
         self.optimizers = []
 
     def get_optimizers(self):
@@ -36,27 +39,30 @@ class BaseNetwork:
         defaults = {'activation_fn': tf.nn.selu, 'weights_initializer': lecun_normal()}
         return tf.contrib.layers.fully_connected(x, size, **defaults)
 
-    def get_current_trainable_vars(self, expected_count):
+    def get_current_trainable_vars(self, expected_count=None):
         prefix = tf.get_variable_scope().name
         result = [v for v in tf.trainable_variables() if v.name.startswith(prefix)]
-        assert len(result) == expected_count
+        assert expected_count is None or len(result) == expected_count
         return result
 
     def run(self, data_generator, iteration, steps, is_training):
         if not self.has_run_initialized:
+            self.has_run_initialized = True
             self.execute = tf.group(*self.get_optimizers())
             self.summary = tf.summary.merge_all()
-            self.session = get_initialized_session(disable_gpu=True)
+            self.session = get_initialized_session(disable_gpu=False)
             self.summary_writer = tf.summary.FileWriter('./log/' + self.log_name, self.session.graph)
-            self.summary_writer.add_session_log(SessionLog(status=SessionLog.START), 0)
-            self.has_run_initialized = True
+            self.saver = tf.train.Saver()
+            self.saver_path = './log/' + self.log_name + '.ckpt'
+
+            if os.path.exists(self.saver_path):
+                self.saver.restore(self.session, self.saver_path)
+            else:
+                self.summary_writer.add_session_log(SessionLog(status=SessionLog.START), 0)
 
         for e in range(steps):
             data = data_generator()
             log, _ = self.session.run([self.summary, self.execute], {**data, self.is_training: is_training})
             self.summary_writer.add_summary(log, iteration+e)
+            self.saver.save(self.session, self.saver_path)
             print('Iteration', e)
-
-
-
-
