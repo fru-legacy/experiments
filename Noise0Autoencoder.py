@@ -35,30 +35,17 @@ class Noise0Autoencoder(BaseNetwork):
 
     # Selu needs stddev = 1 and mean = 0
 
-    def image_normal_encoding_single(self, repeat=8):
+    def image_normal_encoding_single(self, repeat):
         direction = tf.tile(self.data.image_byte, [1, 1, repeat]) * 2 - 1
         normal = tf.abs(tf.random_normal(tf.shape(direction)))
-        return tf.layers.flatten(tf.multiply(normal, direction))
+        return tf.multiply(normal, direction)
 
     @scope(cached_property=True)
-    def latent_input_normalized_version1(self):
-        e1 = self.image_normal_encoding_single()
-        e2 = self.image_normal_encoding_single()
-        return tf.concat([e1, -e2], axis=1)
-
-    @scope(cached_property=True)
-    def latent_input_normalized_version2(self):
-        e1 = tf.random_normal(tf.shape(self.latent_input), mean=self.latent_input / 1.5, stddev=0.8)
-        e2 = tf.random_normal(tf.shape(self.latent_input), mean=self.latent_input / 1.5, stddev=0.8)
-        return tf.concat([e1, -e2], axis=1)
-
-    @scope(cached_property=True)
-    def latent_input_normalized_version3(self):
-        return tf.concat([self.latent_input], axis=1)
-
-    @scope(cached_property=True)
-    def latent_input_normalized_base(self):
-        return tf.random_normal(tf.shape(self.latent_input))
+    def latent_input_normalized(self):
+        repeat = 1  # TODO Why does increasing repeat kill variance norm?
+        e1 = tf.expand_dims(self.image_normal_encoding_single(repeat), -1)
+        e2 = tf.expand_dims(self.image_normal_encoding_single(repeat), -1)
+        return tf.reshape(tf.concat([e1, -e2], axis=-1), [-1, self.base_pixel_count, 8*2*repeat])
 
     # Log mean, variance and the histogram of a tensor
 
@@ -94,29 +81,21 @@ class Noise0Autoencoder(BaseNetwork):
 
     @scope(cached_property=True)
     def latent(self):
-        x = self.latent_input_normalized_base
+        x = self.latent_input_normalized
         Noise0Autoencoder.log_distribution('input', x)
-        x = self.fully_connected(x, self.generator_size // 40)
-        x = self.fully_connected(x, self.generator_size // 40)
-        x = self.fully_connected(x, self.generator_size // 40)
-        x = self.fully_connected(x, self.generator_size // 40)
-        x = self.fully_connected(x, self.generator_size // 40)
-        x = self.fully_connected(x, self.generator_size // 40)
-        x = self.fully_connected(x, self.generator_size // 40)
-        x = self.fully_connected(x, self.generator_size // 40)
-        x = self.fully_connected(x, self.generator_size // 40)
-        x = self.fully_connected(x, self.generator_size // 40)
+        x = self.fully_connected(x, 40)
+        x = self.fully_connected(x, 40)
+        x = self.fully_connected(x, 40)
         Noise0Autoencoder.log_distribution('latent', x)
-        x = self.fully_connected(x, self.generator_size // 4)
-        x = self.fully_connected(x, self.generator_size // 4)
         return x
 
     @scope(cached_property=True)
     def generator(self):
         x = self.latent_minimum_noise
-        x = self.fully_connected(x, self.generator_size // 4)
-        x = self.fully_connected(x, self.generator_size // 4)
-        return x
+        x = self.fully_connected(x, 40)
+        x = self.fully_connected(x, 40)
+        x = self.fully_connected(x, self.restore_classes, plain=True)
+        return tf.layers.flatten(x)
 
     @scope(cached_property=True)
     def latent_minimum_noise(self):
@@ -124,8 +103,11 @@ class Noise0Autoencoder(BaseNetwork):
 
     @scope(cached_property=True)
     def restored(self):
-        connected = self.fully_connected(self.generator, self.generator_size, plain=True)
-        raw = self.restore_image_raw(self.restore_image_tanh(connected))
+        generator = self.generator
+        if generator.get_shape().as_list() != [None, self.generator_size]:
+            print('Warning: Plain restore layer added')
+            generator = self.fully_connected(generator, self.generator_size, plain=True)
+        raw = self.restore_image_raw(self.restore_image_tanh(generator))
         return tf.reshape(raw, [-1] + self.data.info.dim_image)
 
     def create_generator_summary(self):
