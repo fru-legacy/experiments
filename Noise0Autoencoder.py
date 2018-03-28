@@ -25,7 +25,7 @@ class Noise0Autoencoder(BaseNetwork):
         # Helper
 
         self.base_pixel_count = int(np.prod(self.data.info.dim_image))
-        self.generator_size = self.base_pixel_count * self.restore_classes * 2
+        self.generator_size = self.base_pixel_count * self.restore_classes# * 2
 
         # Network
 
@@ -58,13 +58,12 @@ class Noise0Autoencoder(BaseNetwork):
 
     # Restore
 
-    def restore_image_tanh(self, x):
-        baseline = tf.random_normal(tf.shape(x), stddev=self.restore_stddev)
-        return tf.tanh((x - baseline) * self.restore_compare_k)
-
-    def restore_image_raw(self, x):
-        bases = tf.reverse(tf.cast(self.restore_steps ** tf.range(self.restore_classes), tf.float32), [0])
-        return tf.reduce_sum(tf.reshape((x + 1) / 2, [-1, self.restore_classes]) * bases, 1)
+    def restore_image_tanh_v1(self, x):
+        x = tf.reshape(x, [-1, self.base_pixel_count, self.restore_classes])
+        x = x - tf.random_normal(tf.shape(x), stddev=self.restore_stddev)
+        x = (tf.tanh(x * self.restore_compare_k) + 1) / 2
+        x = tf.reduce_sum(x * list(reversed(self.restore_bases())), 2)
+        return x
 
     def restore_bases(self):
         return [self.restore_steps ** float(x) for x in range(self.restore_classes)]
@@ -105,7 +104,7 @@ class Noise0Autoencoder(BaseNetwork):
         x = self.latent_minimum_noise
         x = self.fully_connected(x, 40)
         x = self.fully_connected(x, 40)
-        x = self.fully_connected(x, self.restore_classes * 2, plain=True)
+        x = self.fully_connected(x, self.restore_classes, plain=True) # *2
         return tf.layers.flatten(x)
 
     @scope(cached_property=True)
@@ -116,7 +115,7 @@ class Noise0Autoencoder(BaseNetwork):
     def restored(self):
         # If assert fails, add: self.fully_connected(generator, self.generator_size, plain=True)
         assert(self.generator.get_shape().as_list() == [None, self.generator_size])
-        raw = self.restore_image_tanh_v2(self.generator)
+        raw = self.restore_image_tanh_v1(self.generator)
         return tf.reshape(raw, [-1] + self.data.info.dim_image)
 
     def create_generator_summary(self):
