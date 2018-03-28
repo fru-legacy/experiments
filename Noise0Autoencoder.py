@@ -25,7 +25,7 @@ class Noise0Autoencoder(BaseNetwork):
         # Helper
 
         self.base_pixel_count = int(np.prod(self.data.info.dim_image))
-        self.generator_size = self.base_pixel_count * self.restore_classes
+        self.generator_size = self.base_pixel_count * self.restore_classes * 2
 
         # Network
 
@@ -42,7 +42,7 @@ class Noise0Autoencoder(BaseNetwork):
 
     @scope(cached_property=True)
     def latent_input_normalized(self):
-        repeat = 1  # TODO Why does increasing repeat kill variance norm?
+        repeat = 1  # TODO Why does increasing repeat make latent variance != 1?
         e1 = tf.expand_dims(self.image_normal_encoding_single(repeat), -1)
         e2 = tf.expand_dims(self.image_normal_encoding_single(repeat), -1)
         return tf.reshape(tf.concat([e1, -e2], axis=-1), [-1, self.base_pixel_count, 8*2*repeat])
@@ -65,6 +65,17 @@ class Noise0Autoencoder(BaseNetwork):
     def restore_image_raw(self, x):
         bases = tf.reverse(tf.cast(self.restore_steps ** tf.range(self.restore_classes), tf.float32), [0])
         return tf.reduce_sum(tf.reshape((x + 1) / 2, [-1, self.restore_classes]) * bases, 1)
+
+    def restore_bases(self):
+        return [self.restore_steps ** float(x) for x in range(self.restore_classes)]
+
+    def restore_image_tanh_v2(self, x):  # needs x2 outputs
+        x = tf.reshape(x, [-1, self.base_pixel_count, self.restore_classes, 2])
+        x = tf.reduce_sum(x * [1, -1], 3)
+        x = (tf.tanh(x * self.restore_compare_k) + 1) / 2
+        x = tf.reduce_sum(x * list(reversed(self.restore_bases())), 2)
+        return x
+
 
     # Use this to control feature usability
 
@@ -94,7 +105,7 @@ class Noise0Autoencoder(BaseNetwork):
         x = self.latent_minimum_noise
         x = self.fully_connected(x, 40)
         x = self.fully_connected(x, 40)
-        x = self.fully_connected(x, self.restore_classes, plain=True)
+        x = self.fully_connected(x, self.restore_classes * 2, plain=True)
         return tf.layers.flatten(x)
 
     @scope(cached_property=True)
@@ -103,11 +114,9 @@ class Noise0Autoencoder(BaseNetwork):
 
     @scope(cached_property=True)
     def restored(self):
-        generator = self.generator
-        if generator.get_shape().as_list() != [None, self.generator_size]:
-            print('Warning: Plain restore layer added')
-            generator = self.fully_connected(generator, self.generator_size, plain=True)
-        raw = self.restore_image_raw(self.restore_image_tanh(generator))
+        # If assert fails, add: self.fully_connected(generator, self.generator_size, plain=True)
+        assert(self.generator.get_shape().as_list() == [None, self.generator_size])
+        raw = self.restore_image_tanh_v2(self.generator)
         return tf.reshape(raw, [-1] + self.data.info.dim_image)
 
     def create_generator_summary(self):

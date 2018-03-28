@@ -34,6 +34,7 @@ class BaseNetwork:
         if plain:
             return tf.layers.dense(x, size)
 
+        return tf.layers.dense(x, size, activation=selu, kernel_initializer=initializer)
         defaults = {'activation_fn': selu, 'weights_initializer': initializer}
         return tf.contrib.layers.fully_connected(x, size, **defaults) #biases_initializer=None
 
