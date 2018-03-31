@@ -25,7 +25,7 @@ class Noise0Autoencoder(BaseNetwork):
         # Helper
 
         self.base_pixel_count = int(np.prod(self.data.info.dim_image))
-        self.generator_size = self.base_pixel_count * self.restore_classes
+        self.generator_size = self.base_pixel_count * 2
 
         # Network
 
@@ -35,17 +35,15 @@ class Noise0Autoencoder(BaseNetwork):
 
     # Selu needs stddev = 1 and mean = 0
 
-    def image_normal_encoding_single(self, repeat):
-        direction = tf.tile(self.data.image_byte, [1, 1, repeat]) * 2 - 1
-        normal = tf.abs(tf.random_normal(tf.shape(direction)))
-        return tf.multiply(normal, direction)
+    def image_normal_encoding_single(self):
+        x = tf.cast(self.data.image, tf.float32) / 255.0
+        return (x + 1 / 2) * 1.15
 
     @scope(cached_property=True)
     def latent_input_normalized(self):
-        repeat = 1  # TODO Why does increasing repeat make latent variance != 1?
-        e1 = tf.expand_dims(self.image_normal_encoding_single(repeat), -1)
-        e2 = tf.expand_dims(self.image_normal_encoding_single(repeat), -1)
-        return tf.reshape(tf.concat([e1, -e2], axis=-1), [-1, self.base_pixel_count, 8*2*repeat])
+        e1 = tf.expand_dims(self.image_normal_encoding_single(), -1)
+        e2 = tf.expand_dims(self.image_normal_encoding_single(), -1)
+        return tf.reshape(tf.concat([e1, -e2], axis=-1), [-1, self.base_pixel_count, 2])
 
     # Log mean, variance and the histogram of a tensor
 
@@ -55,18 +53,6 @@ class Noise0Autoencoder(BaseNetwork):
         tf.summary.scalar('mean ' + name, mean)
         tf.summary.scalar('variance ' + name, variance)
         tf.summary.histogram('normal' + name, data)
-
-    # Restore
-
-    def restore_image_tanh(self, x):
-        x = tf.reshape(x, [-1, self.base_pixel_count, self.restore_classes])
-        x = x - tf.random_normal(tf.shape(x), stddev=self.restore_stddev)
-        x = (tf.tanh(x * self.restore_compare_k) + 1) / 2
-        x = tf.reduce_sum(x * list(reversed(self.restore_bases())), 2)
-        return x
-
-    def restore_bases(self):
-        return [self.restore_steps ** float(x) for x in range(self.restore_classes)]
 
     # Use this to control feature usability
 
@@ -96,28 +82,25 @@ class Noise0Autoencoder(BaseNetwork):
         x = self.latent_minimum_noise
         x = self.fully_connected(x, 40)
         x = self.fully_connected(x, 40)
-        x = self.fully_connected(x, self.restore_classes, plain=True)
+        x = self.fully_connected(x, 2, plain=True)
         Noise0Autoencoder.log_distribution('output', x)
-        return tf.layers.flatten(x)
+        return x
 
     @scope(cached_property=True)
     def latent_minimum_noise(self):
         return self.latent + tf.random_normal(tf.shape(self.latent), stddev=self.latent_stddev)
 
-    @scope(cached_property=True)
-    def restored(self):
-        # If assert fails, add: self.fully_connected(generator, self.generator_size, plain=True)
-        assert(self.generator.get_shape().as_list() == [None, self.generator_size])
-        raw = self.restore_image_tanh(self.generator)
-        return tf.reshape(raw, [-1] + self.data.info.dim_image)
+    def extract_image(self, x):
+        x = tf.slice(tf.reshape(x, [-1, 2]), [0, 0], [-1, 1])
+        return tf.reshape(x, [-1] + self.data.info.dim_image)
 
     def create_generator_summary(self):
-        tf.summary.image('restored', self.restored, 1)
-        tf.summary.image('original', self.data.image, 1)
+        tf.summary.image('restored', self.extract_image(self.generator), 1)
+        tf.summary.image('original', self.extract_image(self.latent_input_normalized), 1)
 
     @scope(cached_property=True)
     def optimize_generator(self):
-        x = tf.losses.mean_squared_error(self.data.image, self.restored)
+        x = tf.losses.mean_squared_error(self.latent_input_normalized, self.generator)
         tf.summary.scalar('cross_entropy', x)
         return tf.train.RMSPropOptimizer(self.learning_rate).minimize(x)
 
