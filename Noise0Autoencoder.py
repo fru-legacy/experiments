@@ -15,6 +15,7 @@ class Noise0Autoencoder(BaseNetwork):
         # Parameter
         self.latent_stddev = 1.0 / (255 * 8)
         self.learning_rate = 1e-4
+        self.default_initializer = tf.contrib.layers.xavier_initializer()
 
         # Data
         self.patches = self.data.patches([7, 7], auxiliary_max_count=0)
@@ -30,23 +31,26 @@ class Noise0Autoencoder(BaseNetwork):
     def input_normalized(self):
         return tf.cast(self.patches.data, tf.float32) / 255.0
 
+    def dense(self, x, size, activation=tf.nn.elu):
+        return tf.layers.dense(x, size, activation=activation, kernel_initializer=self.default_initializer)
+
     @scope(cached_property=True)
     def latent(self):
         x = self.input_normalized
         tf.summary.histogram('input', x)
-        x = tf.layers.dense(x, self.base_size * 2, activation=tf.nn.elu, kernel_initializer=tf.contrib.layers.xavier_initializer())
-        x = tf.layers.dense(x, self.base_size * 4, activation=tf.nn.elu, kernel_initializer=tf.contrib.layers.xavier_initializer())
-        x = tf.layers.dense(x, self.base_size * 8, activation=tf.nn.elu, kernel_initializer=tf.contrib.layers.xavier_initializer())
+        x = self.dense(x, self.base_size * 2)
+        x = self.dense(x, self.base_size * 4)
+        x = self.dense(x, self.base_size * 8)
         tf.summary.histogram('latent', x)
         return x
 
     @scope(cached_property=True)
     def generator(self):
         x = self.latent  # _minimum_noise
-        x = tf.layers.dense(x, self.base_size * 8, activation=tf.nn.elu, kernel_initializer=tf.contrib.layers.xavier_initializer())
-        x = tf.layers.dense(x, self.base_size * 4, activation=tf.nn.elu, kernel_initializer=tf.contrib.layers.xavier_initializer())
-        x = tf.layers.dense(x, self.base_size * 2, activation=tf.nn.elu, kernel_initializer=tf.contrib.layers.xavier_initializer())
-        x = tf.layers.dense(x, self.generator_size, activation=None, kernel_initializer=tf.contrib.layers.xavier_initializer())
+        x = self.dense(x, self.base_size * 8)
+        x = self.dense(x, self.base_size * 4)
+        x = self.dense(x, self.base_size * 2)
+        x = self.dense(x, self.generator_size, activation=None)
         tf.summary.histogram('generator', x)
         return x
 
