@@ -17,9 +17,8 @@ class Noise0Autoencoder(BaseNetwork):
         self.learning_rate = 1e-4
 
         # Data
-        self.patches = self.data.patches([28, 28], auxiliary_max_count=0)
-        self.generator_size = self.patches.size
-        self.base_pixel_count = int(np.prod(self.data.info.dim_image))
+        self.patches = self.data.patches([7, 7], auxiliary_max_count=0)
+        self.base_size = self.generator_size = self.patches.size
 
         # Network
         self.optimizers.append(self.optimize_generator)
@@ -34,19 +33,20 @@ class Noise0Autoencoder(BaseNetwork):
     @scope(cached_property=True)
     def latent(self):
         x = self.input_normalized
-        #x = self.fully_connected(x, 40)
-        #x = self.fully_connected(x, 40)
-        #x = self.fully_connected(x, 40)
+        tf.summary.histogram('input', x)
+        x = tf.layers.dense(x, self.base_size * 2, activation=tf.nn.elu, kernel_initializer=tf.contrib.layers.xavier_initializer())
+        x = tf.layers.dense(x, self.base_size * 4, activation=tf.nn.elu, kernel_initializer=tf.contrib.layers.xavier_initializer())
+        x = tf.layers.dense(x, self.base_size * 8, activation=tf.nn.elu, kernel_initializer=tf.contrib.layers.xavier_initializer())
         tf.summary.histogram('latent', x)
         return x
 
     @scope(cached_property=True)
     def generator(self):
         x = self.latent  # _minimum_noise
-        #x = self.fully_connected(x, 40)
-        #x = self.fully_connected(x, 40)
-        #x = self.fully_connected(x, 40)
-        x = self.fully_connected(x, self.generator_size, plain=True)
+        x = tf.layers.dense(x, self.base_size * 8, activation=tf.nn.elu, kernel_initializer=tf.contrib.layers.xavier_initializer())
+        x = tf.layers.dense(x, self.base_size * 4, activation=tf.nn.elu, kernel_initializer=tf.contrib.layers.xavier_initializer())
+        x = tf.layers.dense(x, self.base_size * 2, activation=tf.nn.elu, kernel_initializer=tf.contrib.layers.xavier_initializer())
+        x = tf.layers.dense(x, self.generator_size, activation=None, kernel_initializer=tf.contrib.layers.xavier_initializer())
         tf.summary.histogram('generator', x)
         return x
 
@@ -61,7 +61,7 @@ class Noise0Autoencoder(BaseNetwork):
     @scope(cached_property=True)
     def optimize_generator(self):
         x = tf.losses.mean_squared_error(self.input_normalized, self.generator)
-        #y = compute_mmd(gather_batch(self.input_normalized, 30), gather_batch(self.generator, 30))
-        tf.summary.scalar('cross entropy restore', x)
-        #tf.summary.scalar('mmd', y)
-        return tf.train.AdamOptimizer(self.learning_rate).minimize(x)
+        y = compute_mmd(gather_batch(self.input_normalized, 30), gather_batch(self.generator, 30))
+        tf.summary.scalar('cross entropy', x)
+        tf.summary.scalar('mmd', y)
+        return tf.train.AdamOptimizer(self.learning_rate).minimize(x + y)
