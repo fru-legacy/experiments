@@ -23,6 +23,7 @@ class Noise0Autoencoder(BaseNetwork):
 
         # Network
         self.optimizers.append(self.optimize_generator)
+        self.optimizers.append(self.optimize_discriminator)
         self.create_generator_summary()
 
     # Autoencoder: image -> latent + epsilon noise -> image
@@ -42,11 +43,11 @@ class Noise0Autoencoder(BaseNetwork):
         x = self.dense(x, self.base_size * 4)
         x = self.dense(x, self.base_size * 8)
         tf.summary.histogram('latent', x)
-        return x
+        return x, BaseNetwork.get_current_trainable_vars()
 
     @scope(cached_property=True)
     def generator(self):
-        x = self.latent  # _minimum_noise
+        x = self.latent_minimum_noise
         x = self.dense(x, self.base_size * 8)
         x = self.dense(x, self.base_size * 4)
         x = self.dense(x, self.base_size * 2)
@@ -54,9 +55,19 @@ class Noise0Autoencoder(BaseNetwork):
         tf.summary.histogram('generator', x)
         return x
 
+    @scope()
+    def discriminator(self, x):
+        x, _ = self.latent
+        x = self.dense(x, self.base_size * 8)
+        x = self.dense(x, self.base_size * 4)
+        x = self.dense(x, self.base_size * 2)
+        x = self.dense(x, 2, activation=None)
+        return x, BaseNetwork.get_current_trainable_vars()
+
     @scope(cached_property=True)
     def latent_minimum_noise(self):
-        return self.latent + tf.random_normal(tf.shape(self.latent), stddev=self.latent_stddev)
+        latent, _ = self.latent
+        return latent + tf.random_normal(tf.shape(latent), stddev=self.latent_stddev)
 
     def create_generator_summary(self):
         self.patches.restored_image_summary('restored', self.generator, 1)
@@ -65,7 +76,25 @@ class Noise0Autoencoder(BaseNetwork):
     @scope(cached_property=True)
     def optimize_generator(self):
         x = tf.losses.mean_squared_error(self.input_normalized, self.generator)
-        y = compute_mmd(gather_batch(self.input_normalized, 30), gather_batch(self.generator, 30))
         tf.summary.scalar('cross entropy', x)
-        tf.summary.scalar('mmd', y)
-        return tf.train.AdamOptimizer(self.learning_rate).minimize(x + y)
+        return tf.train.AdamOptimizer(self.learning_rate).minimize(x)
+
+    @scope(cached_property=True)
+    def optimize_mmd(self):
+        normalize = gather_batch(self.latent[0], 30)
+        noise = tf.random_normal(tf.shape(normalize))
+        tf.summary.histogram('target', noise)
+        x = compute_mmd(normalize, noise)
+        tf.summary.scalar('mmd', x)
+        tf.summary.scalar('mmd baseline', compute_mmd(tf.random_normal(tf.shape(normalize)), noise))
+        return tf.train.AdamOptimizer(self.learning_rate).minimize(x)
+
+    @scope(cached_property=True)
+    def optimize_discriminator(self):
+        x1 = self.discriminator(self.latent[0])
+        x2 = self.discriminator(tf.random_normal(tf.shape(self.latent[0])))
+        x1_entropy = tf.losses.softmax_cross_entropy([1, 0], x1)
+        x2_entropy = tf.losses.softmax_cross_entropy([0, 1], x2)
+        tf.summary.scalar('discriminate', x1_entropy)
+        return tf.train.AdamOptimizer(self.learning_rate).minimize(x1_entropy + x2_entropy)
+

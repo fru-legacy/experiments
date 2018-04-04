@@ -17,7 +17,7 @@ class BaseNetwork:
         self.iteration = 0
 
     @staticmethod
-    def get_current_trainable_vars(self, expected_count=None):
+    def get_current_trainable_vars(expected_count=None):
         prefix = tf.get_variable_scope().name
         result = [v for v in tf.trainable_variables() if v.name.startswith(prefix)]
         assert expected_count is None or len(result) == expected_count
